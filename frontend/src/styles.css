@@ -1,0 +1,116 @@
+:root {
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.container {
+  width: min(1024px, 92%);
+  margin: 24px auto 48px;
+  display: grid;
+  gap: 16px;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 8px 22px rgba(2, 6, 23, 0.08);
+  padding: 20px;
+}
+
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: 1.7rem;
+}
+
+.hero p {
+  margin: 0;
+  color: #334155;
+}
+
+.form-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.form-row {
+  display: grid;
+  gap: 6px;
+  font-size: 0.95rem;
+}
+
+input {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.95rem;
+}
+
+.btn-primary {
+  border: 0;
+  border-radius: 10px;
+  padding: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(90deg, #2563eb, #4f46e5);
+  color: white;
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.result-card p {
+  font-size: 1.05rem;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: white;
+  font-weight: 600;
+}
+
+.weak {
+  background: #dc2626;
+}
+
+.average {
+  background: #d97706;
+}
+
+.strong {
+  background: #16a34a;
+}
+
+.error {
+  color: #b91c1c;
+  margin: 0;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
