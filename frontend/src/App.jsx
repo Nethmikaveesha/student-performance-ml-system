@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import Home from './pages/Home';
+import About from './pages/About';
 import StudentDashboard from './pages/StudentDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import ResultPage from './pages/ResultPage';
@@ -43,6 +45,7 @@ const App = () => {
   };
 
   const renderPage = () => {
+    if (currentPage === 'about') return <About />;
     if (currentPage === 'student') return <StudentDashboard onPredict={onPredict} onQuizSubmit={onQuizSubmit} loading={loading} />;
     if (currentPage === 'teacher') return <TeacherDashboard history={history} />;
     if (currentPage === 'result') return <ResultPage result={result} />;
@@ -60,6 +63,12 @@ const App = () => {
       <main className="app-body">
         <div className="container page-content">{renderPage()}</div>
       </main>
+
+      <footer className="app-footer">
+        <div className="container">
+          <Footer />
+        </div>
+      </footer>
     </div>
   );
 };

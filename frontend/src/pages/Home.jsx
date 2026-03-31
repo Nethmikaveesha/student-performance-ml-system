@@ -135,15 +135,6 @@ const styles = `
   .feature-card h3 { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 8px; }
   .feature-card p { font-size: 0.85rem; color: #64748b; line-height: 1.6; }
 
-  /* FOOTER */
-  footer {
-    border-top: 1px solid rgba(255,255,255,0.06);
-    padding: 28px 48px;
-    display: flex; align-items: center; justify-content: space-between;
-    color: #334155; font-size: 0.8rem;
-    flex-wrap: wrap; gap: 12px;
-  }
-  footer span { color: #00d4aa; }
 `;
 
 const features = [
@@ -235,10 +226,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* FOOTER */}
-        <footer>
-          <div>© 2025 <span>EduPredict</span>. All rights reserved.</div>
-        </footer>
       </div>
     </>
   );
