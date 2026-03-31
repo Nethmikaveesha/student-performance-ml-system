@@ -10,7 +10,7 @@ const createStudent = async (req, res) => {
 };
 
 const getStudents = async (_req, res) => {
-  const students = await Student.find().sort({ createdAt: -1 });
+  const students = await Student.find().select('-password').sort({ createdAt: -1 });
   return res.status(200).json({ data: students });
 };
 

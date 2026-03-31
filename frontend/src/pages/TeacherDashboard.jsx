@@ -1,283 +1,5 @@
-import { useState } from "react";
-
-const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  .td-root {
-    font-family: 'DM Sans', sans-serif;
-    min-height: 100vh;
-    background: #060c1a;
-    color: #e2e8f0;
-    display: flex;
-  }
-
-  /* ── SIDEBAR ── */
-  .sidebar {
-    width: 240px; flex-shrink: 0;
-    background: rgba(255,255,255,0.025);
-    border-right: 1px solid rgba(255,255,255,0.06);
-    display: flex; flex-direction: column;
-    position: sticky; top: 0; height: 100vh; overflow-y: auto;
-  }
-  .sidebar-logo {
-    padding: 28px 24px 20px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    display: flex; align-items: center; gap: 10px;
-    font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 800;
-    color: #fff; letter-spacing: -0.03em;
-  }
-  .sidebar-logo-icon {
-    width: 30px; height: 30px; border-radius: 8px;
-    background: linear-gradient(135deg, #00d4aa, #6366f1);
-    display: flex; align-items: center; justify-content: center; font-size: 14px;
-  }
-  .sidebar-role-badge {
-    margin: 12px 16px;
-    background: rgba(99,102,241,0.1);
-    border: 1px solid rgba(99,102,241,0.25);
-    border-radius: 8px; padding: 8px 12px;
-    font-size: 0.72rem; color: #a5b4fc;
-    letter-spacing: 0.06em; text-transform: uppercase;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .sidebar-section {
-    padding: 20px 16px 8px;
-    font-size: 0.68rem; color: #475569;
-    letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500;
-  }
-  .sidebar-nav { padding: 0 8px; flex: 1; }
-  .nav-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px; border-radius: 10px; margin-bottom: 2px;
-    font-size: 0.88rem; color: #64748b; cursor: pointer;
-    transition: background 0.2s, color 0.2s; border: none;
-    background: none; width: 100%; text-align: left;
-    font-family: 'DM Sans', sans-serif;
-  }
-  .nav-item:hover { background: rgba(255,255,255,0.05); color: #94a3b8; }
-  .nav-item.active { background: rgba(99,102,241,0.12); color: #a5b4fc; font-weight: 500; }
-  .nav-count {
-    margin-left: auto; font-size: 0.7rem; padding: 1px 7px; border-radius: 100px;
-    background: rgba(239,68,68,0.15); color: #ef4444;
-  }
-  .sidebar-user {
-    padding: 16px; margin: 8px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 12px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .user-avatar {
-    width: 36px; height: 36px; border-radius: 10px;
-    background: linear-gradient(135deg, #f59e0b, #ef4444);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px; flex-shrink: 0;
-  }
-  .user-name { font-size: 0.85rem; font-weight: 500; color: #e2e8f0; }
-  .user-role { font-size: 0.72rem; color: #475569; }
-
-  /* ── MAIN ── */
-  .td-main { flex: 1; overflow-y: auto; min-width: 0; }
-
-  .topbar {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 20px 32px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    background: rgba(6,12,26,0.6); backdrop-filter: blur(12px);
-    position: sticky; top: 0; z-index: 10;
-    gap: 12px; flex-wrap: wrap;
-  }
-  .topbar-title h2 {
-    font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 800;
-    color: #fff; letter-spacing: -0.03em;
-  }
-  .topbar-title p { font-size: 0.82rem; color: #475569; margin-top: 2px; }
-  .topbar-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-
-  .search-input-wrap { position: relative; }
-  .search-input-wrap input {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 10px; padding: 9px 14px 9px 36px;
-    color: #e2e8f0; font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
-    outline: none; transition: border-color 0.2s; width: 200px;
-  }
-  .search-input-wrap input:focus { border-color: rgba(99,102,241,0.5); }
-  .search-input-wrap input::placeholder { color: #334155; }
-  .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 14px; }
-
-  .btn-export {
-    padding: 9px 18px;
-    background: rgba(99,102,241,0.1);
-    border: 1px solid rgba(99,102,241,0.3);
-    border-radius: 10px;
-    font-family: 'Syne', sans-serif; font-size: 0.82rem; font-weight: 700;
-    color: #a5b4fc; cursor: pointer;
-    transition: background 0.2s;
-  }
-  .btn-export:hover { background: rgba(99,102,241,0.2); }
-
-  .td-body { padding: 28px 32px; }
-
-  /* STAT CARDS */
-  .stat-cards {
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 14px; margin-bottom: 24px;
-  }
-  @media(max-width:900px){ .stat-cards{ grid-template-columns:1fr 1fr; } }
-
-  .stat-card {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 16px; padding: 20px 18px;
-    transition: border-color 0.3s;
-  }
-  .stat-card:hover { border-color: rgba(99,102,241,0.25); }
-  .stat-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .stat-icon-box {
-    width: 36px; height: 36px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center; font-size: 18px;
-  }
-  .stat-val {
-    font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800;
-    color: #fff; letter-spacing: -0.04em;
-  }
-  .stat-label { font-size: 0.78rem; color: #64748b; }
-  .stat-sub { font-size: 0.72rem; margin-top: 6px; }
-
-  /* FILTER TABS */
-  .filter-tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
-  .filter-tab {
-    padding: 7px 16px; border-radius: 100px; font-size: 0.8rem; font-weight: 500;
-    border: 1px solid rgba(255,255,255,0.1); background: transparent;
-    color: #64748b; cursor: pointer; font-family: 'DM Sans', sans-serif;
-    transition: all 0.2s;
-  }
-  .filter-tab:hover { border-color: rgba(99,102,241,0.3); color: #94a3b8; }
-  .filter-tab.active {
-    background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.35); color: #a5b4fc;
-  }
-  .filter-tab.weak-tab.active {
-    background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #ef4444;
-  }
-
-  /* STUDENT TABLE */
-  .table-panel {
-    background: rgba(255,255,255,0.025);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 20px; overflow: hidden; margin-bottom: 24px;
-  }
-  .table-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 20px 24px 16px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-  }
-  .table-header h3 {
-    font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700;
-    color: #fff; letter-spacing: -0.02em;
-  }
-  .table-header span { font-size: 0.78rem; color: #475569; }
-
-  table { width: 100%; border-collapse: collapse; }
-  thead tr { border-bottom: 1px solid rgba(255,255,255,0.06); }
-  th {
-    text-align: left; padding: 12px 24px;
-    font-size: 0.7rem; color: #475569;
-    letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500;
-  }
-  tbody tr {
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    transition: background 0.15s; cursor: pointer;
-  }
-  tbody tr:last-child { border-bottom: none; }
-  tbody tr:hover { background: rgba(255,255,255,0.025); }
-  td { padding: 14px 24px; font-size: 0.88rem; color: #94a3b8; vertical-align: middle; }
-
-  .student-cell { display: flex; align-items: center; gap: 12px; }
-  .student-av {
-    width: 34px; height: 34px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px; flex-shrink: 0;
-  }
-  .student-name { font-weight: 500; color: #e2e8f0; font-size: 0.9rem; }
-  .student-id { font-size: 0.72rem; color: #475569; }
-
-  .tag {
-    display: inline-block; padding: 4px 12px; border-radius: 100px;
-    font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-  }
-  .tag-strong { background: rgba(0,212,170,0.12); color: #00d4aa; border: 1px solid rgba(0,212,170,0.2); }
-  .tag-average { background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2); }
-  .tag-weak { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); }
-
-  .score-cell { display: flex; align-items: center; gap: 8px; }
-  .score-bar { width: 60px; height: 4px; border-radius: 100px; background: rgba(255,255,255,0.07); overflow: hidden; }
-  .score-bar-fill { height: 100%; border-radius: 100px; }
-
-  .action-btn {
-    padding: 5px 12px; border-radius: 8px;
-    font-size: 0.72rem; font-weight: 600; cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    border: 1px solid rgba(255,255,255,0.1); background: transparent;
-    color: #64748b; transition: all 0.2s;
-  }
-  .action-btn:hover { border-color: rgba(99,102,241,0.35); color: #a5b4fc; }
-
-  /* BOTTOM GRID */
-  .bottom-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 20px;
-  }
-  @media(max-width:800px){ .bottom-grid{ grid-template-columns:1fr; } }
-
-  .panel {
-    background: rgba(255,255,255,0.025);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 20px; overflow: hidden;
-  }
-  .panel-header {
-    padding: 20px 24px 16px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .panel-header h3 {
-    font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700;
-    color: #fff; letter-spacing: -0.02em;
-  }
-  .panel-header span { font-size: 0.78rem; color: #475569; }
-  .panel-body { padding: 20px 24px; }
-
-  /* DISTRIBUTION BARS */
-  .dist-item { margin-bottom: 16px; }
-  .dist-label-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-  .dist-label { font-size: 0.82rem; color: #94a3b8; }
-  .dist-count { font-family: 'Syne', sans-serif; font-size: 0.88rem; font-weight: 700; color: #fff; }
-  .dist-bar { height: 8px; border-radius: 100px; background: rgba(255,255,255,0.07); overflow: hidden; }
-  .dist-bar-fill { height: 100%; border-radius: 100px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
-
-  /* ALERTS */
-  .alert-list { display: flex; flex-direction: column; gap: 10px; }
-  .alert-item {
-    display: flex; align-items: flex-start; gap: 12px;
-    background: rgba(239,68,68,0.06);
-    border: 1px solid rgba(239,68,68,0.15);
-    border-radius: 12px; padding: 14px 16px;
-  }
-  .alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-  .alert-name { font-size: 0.88rem; color: #fca5a5; font-weight: 500; margin-bottom: 4px; }
-  .alert-detail { font-size: 0.78rem; color: #7f1d1d; line-height: 1.4; }
-  .alert-action {
-    margin-left: auto; flex-shrink: 0;
-    padding: 5px 12px; border-radius: 8px;
-    font-size: 0.72rem; font-weight: 600; cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.1);
-    color: #ef4444; transition: all 0.2s; white-space: nowrap;
-  }
-  .alert-action:hover { background: rgba(239,68,68,0.2); }
-`;
+import { useMemo, useState } from "react";
+import '../styles/TeacherDashboard.css';
 
 const navItems = [
   { icon: "📊", label: "Overview", active: true },
@@ -312,20 +34,63 @@ const alerts = [
 
 const scoreColor = (s) => s >= 75 ? "#00d4aa" : s >= 50 ? "#f59e0b" : "#ef4444";
 
-export default function TeacherDashboard() {
+export default function TeacherDashboard({ history = [], currentUser }) {
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [activeNav, setActiveNav] = useState(0);
 
-  const filtered = students.filter(s =>
+  const dynamicStudents = useMemo(() => {
+    if (!history.length) return students;
+    return history.map((h, idx) => ({
+      name: h.studentId || `Student ${idx + 1}`,
+      id: h.studentId || `STU-${String(idx + 1).padStart(3, "0")}`,
+      emoji: "🧑",
+      tag: h.prediction || "Average",
+      cls:
+        h.prediction === "Strong"
+          ? "tag-strong"
+          : h.prediction === "Weak"
+          ? "tag-weak"
+          : "tag-average",
+      quiz: Number(h.quizScore || 0),
+      attendance: Number(h.attendancePercentage || 0),
+      study: Number(h.studyTime || 0),
+    }));
+  }, [history]);
+
+  const filtered = dynamicStudents.filter(s =>
     (filter === "All" || s.tag === filter) &&
     (s.name.toLowerCase().includes(search.toLowerCase()) || s.id.includes(search))
   );
 
+  const distribution = useMemo(() => {
+    const total = dynamicStudents.length || 1;
+    const strong = dynamicStudents.filter((s) => s.tag === "Strong").length;
+    const average = dynamicStudents.filter((s) => s.tag === "Average").length;
+    const weak = dynamicStudents.filter((s) => s.tag === "Weak").length;
+    return [
+      { label: "Strong Students", count: strong, pct: Math.round((strong / total) * 100), color: "#00d4aa" },
+      { label: "Average Students", count: average, pct: Math.round((average / total) * 100), color: "#f59e0b" },
+      { label: "Weak Students", count: weak, pct: Math.round((weak / total) * 100), color: "#ef4444" },
+    ];
+  }, [dynamicStudents]);
+
+  const exportCsv = () => {
+    const headers = ["student_id", "prediction", "quiz_score", "attendance", "study_time"];
+    const rows = filtered.map((s) => [s.id, s.tag, s.quiz, s.attendance, s.study]);
+    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "teacher-report.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
-      <style>{styles}</style>
-      <div className="td-root">
+<div className="td-root">
         {/* SIDEBAR */}
         <aside className="sidebar">
           <div className="sidebar-logo">
@@ -347,8 +112,8 @@ export default function TeacherDashboard() {
           <div className="sidebar-user">
             <div className="user-avatar">👩</div>
             <div>
-              <div className="user-name">Dr. Sarah Chen</div>
-              <div className="user-role">Teacher · CS Dept.</div>
+              <div className="user-name">{currentUser?.name || "Dr. Sarah Chen"}</div>
+              <div className="user-role">Teacher · {currentUser?.email || "CS Dept."}</div>
             </div>
           </div>
         </aside>
@@ -367,7 +132,7 @@ export default function TeacherDashboard() {
                 <input placeholder="Search students…" value={search}
                   onChange={e => setSearch(e.target.value)} />
               </div>
-              <button className="btn-export">⬇ Export Report</button>
+              <button className="btn-export" onClick={exportCsv}>⬇ Export Report</button>
             </div>
           </div>
 
@@ -451,7 +216,14 @@ export default function TeacherDashboard() {
                         </td>
                         <td style={{ color: "#94a3b8" }}>{s.study}h / day</td>
                         <td>
-                          <button className="action-btn">View →</button>
+                          <button
+                            className="action-btn"
+                            onClick={() =>
+                              alert(`${s.name}\nPrediction: ${s.tag}\nQuiz: ${s.quiz}%\nAttendance: ${s.attendance}%\nStudy: ${s.study}h/day`)
+                            }
+                          >
+                            View →
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -466,14 +238,10 @@ export default function TeacherDashboard() {
               <div className="panel">
                 <div className="panel-header">
                   <h3>📊 Class Distribution</h3>
-                  <span>42 students</span>
+                  <span>{dynamicStudents.length} students</span>
                 </div>
                 <div className="panel-body">
-                  {[
-                    { label: "Strong Students", count: 18, pct: 43, color: "#00d4aa" },
-                    { label: "Average Students", count: 16, pct: 38, color: "#f59e0b" },
-                    { label: "Weak Students", count: 8, pct: 19, color: "#ef4444" },
-                  ].map(d => (
+                  {distribution.map(d => (
                     <div className="dist-item" key={d.label}>
                       <div className="dist-label-row">
                         <span className="dist-label">{d.label}</span>
@@ -519,7 +287,12 @@ export default function TeacherDashboard() {
                           <div className="alert-name">{a.name}</div>
                           <div className="alert-detail">{a.detail}</div>
                         </div>
-                        <button className="alert-action">Contact</button>
+                        <button
+                          className="alert-action"
+                          onClick={() => (window.location.href = "mailto:support@edupredict.com")}
+                        >
+                          Contact
+                        </button>
                       </div>
                     ))}
                   </div>
