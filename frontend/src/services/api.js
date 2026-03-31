@@ -7,3 +7,5 @@ const API = axios.create({
 export const predictPerformance = async (payload) => (await API.post('/predictions', payload)).data;
 export const getPredictionHistory = async () => (await API.get('/predictions/history')).data;
 export const createQuiz = async (payload) => (await API.post('/quiz', payload)).data;
+export const registerUser = async (payload) => (await API.post('/auth/register', payload)).data;
+export const loginUser = async (payload) => (await API.post('/auth/login', payload)).data;
