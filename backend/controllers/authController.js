@@ -13,18 +13,19 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'role must be student or teacher' });
     }
 
-    const existingStudent = await Student.findOne({ email: String(email).toLowerCase() });
-    const existingTeacher = await Teacher.findOne({ email: String(email).toLowerCase() });
-    if (existingStudent || existingTeacher) {
-      return res.status(409).json({ message: 'Email already exists' });
-    }
+    const normalizedEmail = String(email).toLowerCase();
 
     if (normalizedRole === 'student') {
       const studentId = `STU-${Date.now().toString().slice(-6)}`;
+      const existingStudent = await Student.findOne({ email: normalizedEmail });
+      if (existingStudent) {
+        return res.status(409).json({ message: 'Student account already exists for this email. Please login.' });
+      }
+
       const student = await Student.create({
         studentId,
         name,
-        email,
+        email: normalizedEmail,
         password,
         role: 'student',
       });
@@ -39,9 +40,14 @@ const register = async (req, res) => {
       });
     }
 
+    const existingTeacher = await Teacher.findOne({ email: normalizedEmail });
+    if (existingTeacher) {
+      return res.status(409).json({ message: 'Teacher account already exists for this email. Please login.' });
+    }
+
     const teacher = await Teacher.create({
       name,
-      email,
+      email: normalizedEmail,
       password,
       role: 'teacher',
     });
@@ -54,6 +60,9 @@ const register = async (req, res) => {
       },
     });
   } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({ message: 'Account already exists with this email.' });
+    }
     return res.status(500).json({ message: error.message });
   }
 };

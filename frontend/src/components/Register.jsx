@@ -12,9 +12,9 @@ const Register = ({ onRegister }) => {
     e.preventDefault();
     setError('');
     setMessage('');
-    const ok = await onRegister?.({ name, email, password, role });
-    if (!ok) {
-      setError('Registration failed. Email may already exist.');
+    const result = await onRegister?.({ name, email, password, role });
+    if (!result?.ok) {
+      setError(result?.message || 'Registration failed.');
       return;
     }
     setMessage('Account created. You can now login.');

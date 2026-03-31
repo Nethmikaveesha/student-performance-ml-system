@@ -51,9 +51,12 @@ const App = () => {
     try {
       await registerUser(payload);
       setCurrentPage('login');
-      return true;
-    } catch (_error) {
-      return false;
+      return { ok: true, message: '' };
+    } catch (error) {
+      return {
+        ok: false,
+        message: error?.response?.data?.message || 'Registration failed. Please try again.',
+      };
     }
   };
 
