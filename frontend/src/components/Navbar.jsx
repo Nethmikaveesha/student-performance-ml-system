@@ -1,14 +1,15 @@
 const Navbar = ({ currentPage, setCurrentPage }) => {
   const links = [
     { key: 'home', label: 'Home' },
-    { key: 'student', label: 'Student Dashboard' },
-    { key: 'teacher', label: 'Teacher Dashboard' },
-    { key: 'result', label: 'Result Page' },
+    { key: 'about', label: 'About' },
+    { key: 'student', label: 'Login' },
+    { key: 'teacher', label: 'Signup' },
+   
   ];
 
   return (
     <nav className="navbar card">
-      <h2>Smart Student System</h2>
+      <h2>EduPredict</h2>
       <div className="nav-links">
         {links.map((link) => (
           <button

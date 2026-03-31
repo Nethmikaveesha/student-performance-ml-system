@@ -216,12 +216,6 @@ const styles = `
   }
   .btn-ghost:hover { border-color: rgba(255,255,255,0.25); color: #fff; }
 
-  footer {
-    border-top: 1px solid rgba(255,255,255,0.06);
-    padding: 24px 48px; color: #334155; font-size: 0.8rem;
-    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
-  }
-  footer span { color: #00d4aa; }
 `;
 
 const configs = {
@@ -406,10 +400,6 @@ export default function ResultPage({ result = "Strong" }) {
             )}
           </main>
 
-          <footer>
-            <div>© 2025 <span>EduPredict</span></div>
-            <div>Predictions are powered by ML — not a substitute for teacher feedback</div>
-          </footer>
         </div>
       </div>
     </>
