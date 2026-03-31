@@ -2,64 +2,65 @@ import { useMemo, useState } from "react";
 import '../styles/TeacherDashboard.css';
 
 const navItems = [
-  { icon: "📊", label: "Overview", active: true },
-  { icon: "👥", label: "All Students" },
-  { icon: "⚠️", label: "At Risk", count: 3 },
-  { icon: "📈", label: "Analytics" },
-  { icon: "📋", label: "Reports" },
-  { icon: "⚙️", label: "Settings" },
-];
-
-const statCards = [
-  { icon: "👥", bg: "rgba(99,102,241,0.12)", label: "Total Students", val: "42", sub: "+3 this term", subColor: "#00d4aa" },
-  { icon: "🏆", bg: "rgba(0,212,170,0.12)", label: "Strong Performers", val: "18", sub: "43% of class", subColor: "#00d4aa" },
-  { icon: "📊", bg: "rgba(245,158,11,0.1)", label: "Average Students", val: "16", sub: "38% of class", subColor: "#f59e0b" },
-  { icon: "⚠️", bg: "rgba(239,68,68,0.1)", label: "At-Risk Students", val: "8", sub: "Needs attention", subColor: "#ef4444" },
-];
-
-const students = [
-  { name: "Aisha Patel", id: "STU-001", emoji: "👩", tag: "Strong", cls: "tag-strong", quiz: 91, attendance: 95, study: 6.5 },
-  { name: "Marcus Bell", id: "STU-002", emoji: "👦", tag: "Average", cls: "tag-average", quiz: 65, attendance: 78, study: 3.5 },
-  { name: "Lena Schmidt", id: "STU-003", emoji: "👧", tag: "Weak", cls: "tag-weak", quiz: 32, attendance: 48, study: 1.2 },
-  { name: "Raj Kumar", id: "STU-004", emoji: "👨", tag: "Strong", cls: "tag-strong", quiz: 88, attendance: 92, study: 5.8 },
-  { name: "Sofia Morales", id: "STU-005", emoji: "👩", tag: "Weak", cls: "tag-weak", quiz: 28, attendance: 52, study: 1.5 },
-  { name: "James Okonkwo", id: "STU-006", emoji: "👦", tag: "Average", cls: "tag-average", quiz: 72, attendance: 81, study: 4.2 },
-];
-
-const alerts = [
-  { name: "Lena Schmidt", detail: "Attendance dropped to 48% — missed 12 of last 25 classes. Quiz score: 32%." },
-  { name: "Sofia Morales", detail: "No assignment submissions in 2 weeks. Study time under 2h/day." },
-  { name: "Tyler Nguyen", detail: "Consecutive quiz failures. Predicted: Weak for the 2nd month running." },
+  { icon: "📊", label: "Overview", section: "overview", page: "teacher-overview" },
+  { icon: "👥", label: "All Students", section: "allstudents", page: "teacher-allstudents" },
+  { icon: "⚠️", label: "At Risk", section: "atrisk", page: "teacher-atrisk", count: 3 },
+  { icon: "📈", label: "Analytics", section: "analytics", page: "teacher-analytics" },
+  { icon: "📋", label: "Reports", section: "reports", page: "teacher-reports" },
+  { icon: "⚙️", label: "Settings", section: "settings", page: "teacher-settings" },
 ];
 
 const scoreColor = (s) => s >= 75 ? "#00d4aa" : s >= 50 ? "#f59e0b" : "#ef4444";
 
-export default function TeacherDashboard({ history = [], currentUser }) {
+export default function TeacherDashboard({ history = [], students = [], currentUser, currentSection = "overview", onNavigate, onLogout }) {
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
-  const [activeNav, setActiveNav] = useState(0);
 
   const dynamicStudents = useMemo(() => {
-    if (!history.length) return students;
-    return history.map((h, idx) => ({
-      name: h.studentId || `Student ${idx + 1}`,
-      id: h.studentId || `STU-${String(idx + 1).padStart(3, "0")}`,
+    const latestByStudent = new Map();
+    history.forEach((item) => {
+      const key = item.studentId || "UNKNOWN";
+      const prev = latestByStudent.get(key);
+      if (!prev || new Date(item.createdAt).getTime() > new Date(prev.createdAt).getTime()) {
+        latestByStudent.set(key, item);
+      }
+    });
+
+    const studentMap = new Map(students.map((s) => [s.studentId, s]));
+    const rows = Array.from(latestByStudent.values()).map((h, idx) => {
+      const studentRecord = studentMap.get(h.studentId);
+      const prediction = h.prediction || "Average";
+      return {
+        name: studentRecord?.name || h.studentId || `Student ${idx + 1}`,
+        id: h.studentId || `STU-${String(idx + 1).padStart(3, "0")}`,
+        emoji: "🧑",
+        tag: prediction,
+        cls: prediction === "Strong" ? "tag-strong" : prediction === "Weak" ? "tag-weak" : "tag-average",
+        quiz: Number(h.quizScore || 0),
+        attendance: Number(h.attendancePercentage || 0),
+        study: Number(h.studyTime || 0),
+        assignment: Number(h.assignmentCompletion || 0),
+      };
+    });
+
+    if (rows.length) return rows;
+    return students.map((s, idx) => ({
+      name: s.name,
+      id: s.studentId || `STU-${String(idx + 1).padStart(3, "0")}`,
       emoji: "🧑",
-      tag: h.prediction || "Average",
-      cls:
-        h.prediction === "Strong"
-          ? "tag-strong"
-          : h.prediction === "Weak"
-          ? "tag-weak"
-          : "tag-average",
-      quiz: Number(h.quizScore || 0),
-      attendance: Number(h.attendancePercentage || 0),
-      study: Number(h.studyTime || 0),
+      tag: "Average",
+      cls: "tag-average",
+      quiz: 0,
+      attendance: 0,
+      study: 0,
+      assignment: 0,
     }));
-  }, [history]);
+  }, [history, students]);
+
+  const effectiveFilter = currentSection === "atrisk" ? "Weak" : filter;
 
   const filtered = dynamicStudents.filter(s =>
-    (filter === "All" || s.tag === filter) &&
+    (effectiveFilter === "All" || s.tag === effectiveFilter) &&
     (s.name.toLowerCase().includes(search.toLowerCase()) || s.id.includes(search))
   );
 
@@ -74,6 +75,57 @@ export default function TeacherDashboard({ history = [], currentUser }) {
       { label: "Weak Students", count: weak, pct: Math.round((weak / total) * 100), color: "#ef4444" },
     ];
   }, [dynamicStudents]);
+
+  const avgQuiz = dynamicStudents.length ? Math.round(dynamicStudents.reduce((a, c) => a + Number(c.quiz || 0), 0) / dynamicStudents.length) : 0;
+  const avgAttendance = dynamicStudents.length
+    ? Math.round(dynamicStudents.reduce((a, c) => a + Number(c.attendance || 0), 0) / dynamicStudents.length)
+    : 0;
+  const avgAssignments = dynamicStudents.length
+    ? Math.round((dynamicStudents.reduce((a, c) => a + Number(c.assignment || 0), 0) / (dynamicStudents.length * 10)) * 100)
+    : 0;
+
+  const statCards = [
+    {
+      icon: "👥",
+      bg: "rgba(99,102,241,0.12)",
+      label: "Total Students",
+      val: String(dynamicStudents.length),
+      sub: `${students.length} registered`,
+      subColor: "#00d4aa",
+    },
+    {
+      icon: "🏆",
+      bg: "rgba(0,212,170,0.12)",
+      label: "Strong Performers",
+      val: String(distribution[0].count),
+      sub: `${distribution[0].pct}% of class`,
+      subColor: "#00d4aa",
+    },
+    {
+      icon: "📊",
+      bg: "rgba(245,158,11,0.1)",
+      label: "Average Students",
+      val: String(distribution[1].count),
+      sub: `${distribution[1].pct}% of class`,
+      subColor: "#f59e0b",
+    },
+    {
+      icon: "⚠️",
+      bg: "rgba(239,68,68,0.1)",
+      label: "At-Risk Students",
+      val: String(distribution[2].count),
+      sub: distribution[2].count ? "Needs attention" : "Stable",
+      subColor: "#ef4444",
+    },
+  ];
+
+  const alerts = dynamicStudents
+    .filter((s) => s.tag === "Weak" || s.attendance < 60 || s.quiz < 50)
+    .slice(0, 4)
+    .map((s) => ({
+      name: s.name,
+      detail: `Quiz: ${s.quiz}%, Attendance: ${s.attendance}%, Study time: ${s.study}h/day`,
+    }));
 
   const exportCsv = () => {
     const headers = ["student_id", "prediction", "quiz_score", "attendance", "study_time"];
@@ -100,9 +152,12 @@ export default function TeacherDashboard({ history = [], currentUser }) {
           <div className="sidebar-role-badge">👩‍🏫 Teacher Portal</div>
           <div className="sidebar-nav">
             <div className="sidebar-section">Navigation</div>
-            {navItems.map((n, i) => (
-              <button key={n.label} className={`nav-item ${activeNav === i ? "active" : ""}`}
-                onClick={() => setActiveNav(i)}>
+            {navItems.map((n) => (
+              <button
+                key={n.label}
+                className={`nav-item ${currentSection === n.section ? "active" : ""}`}
+                onClick={() => onNavigate?.(n.page)}
+              >
                 <span>{n.icon}</span>
                 {n.label}
                 {n.count && <span className="nav-count">{n.count}</span>}
@@ -115,6 +170,12 @@ export default function TeacherDashboard({ history = [], currentUser }) {
               <div className="user-name">{currentUser?.name || "Dr. Sarah Chen"}</div>
               <div className="user-role">Teacher · {currentUser?.email || "CS Dept."}</div>
             </div>
+          </div>
+          <div style={{ padding: "0 8px 12px" }}>
+            <button className="nav-item" onClick={onLogout}>
+              <span>🚪</span>
+              Logout
+            </button>
           </div>
         </aside>
 
@@ -138,6 +199,7 @@ export default function TeacherDashboard({ history = [], currentUser }) {
 
           <div className="td-body">
             {/* STAT CARDS */}
+            {(currentSection === "overview" || currentSection === "analytics") && (
             <div className="stat-cards">
               {statCards.map(s => (
                 <div className="stat-card" key={s.label}>
@@ -150,8 +212,10 @@ export default function TeacherDashboard({ history = [], currentUser }) {
                 </div>
               ))}
             </div>
+            )}
 
             {/* FILTER TABS */}
+            {(currentSection === "overview" || currentSection === "allstudents" || currentSection === "atrisk" || currentSection === "reports") && (
             <div className="filter-tabs">
               {["All","Strong","Average","Weak"].map(f => (
                 <button key={f}
@@ -161,8 +225,10 @@ export default function TeacherDashboard({ history = [], currentUser }) {
                 </button>
               ))}
             </div>
+            )}
 
             {/* STUDENT TABLE */}
+            {(currentSection === "allstudents" || currentSection === "atrisk") && (
             <div className="table-panel">
               <div className="table-header">
                 <h3>👥 Student Performance</h3>
@@ -231,10 +297,69 @@ export default function TeacherDashboard({ history = [], currentUser }) {
                 </table>
               </div>
             </div>
+            )}
+
+            {currentSection === "reports" && (
+              <div className="panel">
+                <div className="panel-header">
+                  <h3>📋 Reports Center</h3>
+                  <span>{dynamicStudents.length} students in current dataset</span>
+                </div>
+                <div className="panel-body">
+                  <div className="stat-cards" style={{ marginBottom: 16 }}>
+                    <div className="stat-card">
+                      <div className="stat-val">{dynamicStudents.length}</div>
+                      <div className="stat-label">Total Students</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-val">{distribution[0].count}</div>
+                      <div className="stat-label">Strong Students</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-val">{distribution[1].count}</div>
+                      <div className="stat-label">Average Students</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-val">{distribution[2].count}</div>
+                      <div className="stat-label">At-Risk Students</div>
+                    </div>
+                  </div>
+                  <p style={{ color: "#94a3b8", marginBottom: 12 }}>
+                    Use the export button in the top-right to download the current report as CSV.
+                  </p>
+                  <div style={{ overflowX: "auto" }}>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Student</th>
+                          <th>Prediction</th>
+                          <th>Quiz</th>
+                          <th>Attendance</th>
+                          <th>Study Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dynamicStudents.slice(0, 10).map((s) => (
+                          <tr key={`report-${s.id}`}>
+                            <td>{s.name}</td>
+                            <td>{s.tag}</td>
+                            <td>{s.quiz}%</td>
+                            <td>{s.attendance}%</td>
+                            <td>{s.study}h/day</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* BOTTOM GRID */}
+            {(currentSection === "analytics" || currentSection === "atrisk") && (
             <div className="bottom-grid">
               {/* DISTRIBUTION */}
+              {currentSection === "analytics" && (
               <div className="panel">
                 <div className="panel-header">
                   <h3>📊 Class Distribution</h3>
@@ -256,9 +381,9 @@ export default function TeacherDashboard({ history = [], currentUser }) {
                   <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                     <div style={{ fontSize: "0.78rem", color: "#475569", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Class Average Metrics</div>
                     {[
-                      { label: "Quiz Score", val: 68, color: "#f59e0b" },
-                      { label: "Attendance", val: 75, color: "#00d4aa" },
-                      { label: "Assignments", val: 72, color: "#6366f1" },
+                      { label: "Quiz Score", val: avgQuiz, color: "#f59e0b" },
+                      { label: "Attendance", val: avgAttendance, color: "#00d4aa" },
+                      { label: "Assignments", val: avgAssignments, color: "#6366f1" },
                     ].map(m => (
                       <div key={m.label} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
                         <span style={{ fontSize:"0.78rem", color:"#64748b", width:90, flexShrink:0 }}>{m.label}</span>
@@ -271,8 +396,10 @@ export default function TeacherDashboard({ history = [], currentUser }) {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* ALERTS */}
+              {currentSection === "atrisk" && (
               <div className="panel">
                 <div className="panel-header">
                   <h3>⚠️ Attention Required</h3>
@@ -295,6 +422,9 @@ export default function TeacherDashboard({ history = [], currentUser }) {
                         </button>
                       </div>
                     ))}
+                    {!alerts.length && (
+                      <div style={{ color: "#94a3b8", fontSize: "0.85rem" }}>No critical alerts at the moment.</div>
+                    )}
                   </div>
                   <div style={{
                     marginTop: 16, padding: "12px 16px", borderRadius: 12,
@@ -305,7 +435,21 @@ export default function TeacherDashboard({ history = [], currentUser }) {
                   </div>
                 </div>
               </div>
+              )}
             </div>
+            )}
+
+            {currentSection === "settings" && (
+              <div className="panel">
+                <div className="panel-header">
+                  <h3>⚙️ Teacher Settings</h3>
+                  <span>Manage preferences</span>
+                </div>
+                <div className="panel-body">
+                  <p style={{ color: "#94a3b8" }}>Configure class preferences, alerts, and reporting defaults here.</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

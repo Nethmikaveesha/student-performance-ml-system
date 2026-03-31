@@ -2,27 +2,15 @@ import { useMemo, useState } from "react";
 import '../styles/StudentDashboard.css';
 
 const navItems = [
-  { icon: "📊", label: "Dashboard", active: true },
-  { icon: "🔮", label: "Predict" },
-  { icon: "📝", label: "Quizzes" },
-  { icon: "📈", label: "Progress" },
-  { icon: "💡", label: "Suggestions" },
-  { icon: "⚙️", label: "Settings" },
+  { icon: "📊", label: "Dashboard", section: "dashboard", page: "student-dashboard" },
+  { icon: "🔮", label: "Predict", section: "predict", page: "student-predict" },
+  { icon: "📝", label: "Quizzes", section: "quizzes", page: "student-quizzes" },
+  { icon: "📈", label: "Progress", section: "progress", page: "student-progress" },
+  { icon: "💡", label: "Suggestions", section: "suggestions", page: "student-suggestions" },
+  { icon: "⚙️", label: "Settings", section: "settings", page: "student-settings" },
 ];
 
-const statCards = [
-  { icon: "📚", label: "Study Hours", val: "4.2", unit: "/day", trend: "+0.8", up: true },
-  { icon: "📝", label: "Quiz Score", val: "76%", unit: "", trend: "+4%", up: true },
-  { icon: "✅", label: "Attendance", val: "89%", unit: "", trend: "-2%", up: false },
-  { icon: "📋", label: "Assignments", val: "92%", unit: "", trend: "+6%", up: true },
-];
-
-const fallbackHistory = [
-  { icon: "🔮", name: "Performance Prediction", date: "Today, 10:14 AM", tag: "Strong", cls: "tag-strong" },
-  { icon: "📝", name: "Mid-Term Quiz", date: "Yesterday, 2:30 PM", tag: "Average", cls: "tag-average" },
-  { icon: "🔮", name: "Performance Prediction", date: "Mar 18, 9:00 AM", tag: "Average", cls: "tag-average" },
-  { icon: "📝", name: "Chapter 4 Quiz", date: "Mar 15, 11:20 AM", tag: "Strong", cls: "tag-strong" },
-];
+const fallbackHistory = [];
 
 const quizQuestions = [
   {
@@ -37,26 +25,36 @@ const quizQuestions = [
 
 const quizAnswers = [1, 2];
 
-export default function StudentDashboard({ onPredict, onQuizSubmit, loading, currentUser, predictionHistory = [] }) {
+export default function StudentDashboard({
+  onPredict,
+  onQuizSubmit,
+  loading,
+  currentUser,
+  predictionHistory = [],
+  currentSection = "dashboard",
+  onNavigate,
+  onLogout,
+}) {
   const [form, setForm] = useState({
-    studyTime: 4, quizScore: "", attendance: "", assignments: "", lessons: "", attempts: 3
+    studyTime: 0, quizScore: "", attendance: "", assignments: "", lessons: "", attempts: 0
   });
   const [answers, setAnswers] = useState({});
-  const [activeNav, setActiveNav] = useState(0);
   const [quizMessage, setQuizMessage] = useState("");
+  const [quizActivities, setQuizActivities] = useState([]);
 
   const studentId =
+    currentUser?.studentId ||
     currentUser?.email?.split("@")[0]?.toUpperCase() ||
     currentUser?.name?.replace(/\s+/g, "").toUpperCase() ||
     "STUDENT_DEMO";
 
   const liveHistory = useMemo(() => {
-    if (!predictionHistory.length) return fallbackHistory;
-    return predictionHistory.slice(0, 6).map((item) => ({
+    const predictionActivities = predictionHistory.map((item) => ({
       icon: "🔮",
       name: "Performance Prediction",
       date: new Date(item.createdAt).toLocaleString(),
       tag: item.prediction,
+      timestamp: new Date(item.createdAt).getTime(),
       cls:
         item.prediction === "Strong"
           ? "tag-strong"
@@ -64,7 +62,72 @@ export default function StudentDashboard({ onPredict, onQuizSubmit, loading, cur
           ? "tag-average"
           : "tag-weak",
     }));
-  }, [predictionHistory]);
+
+    return [...predictionActivities, ...quizActivities]
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+      .slice(0, 10);
+  }, [predictionHistory, quizActivities]);
+
+  const latest = predictionHistory[0];
+  const previous = predictionHistory[1];
+
+  const metricDelta = (currentValue, previousValue) => {
+    if (currentValue === undefined || currentValue === null) return { text: "0", up: true };
+    if (previousValue === undefined || previousValue === null) return { text: "new", up: true };
+    const diff = Number(currentValue) - Number(previousValue);
+    return { text: `${diff >= 0 ? "+" : ""}${diff.toFixed(1)}`, up: diff >= 0 };
+  };
+
+  const studyDelta = metricDelta(latest?.studyTime, previous?.studyTime);
+  const quizDelta = metricDelta(latest?.quizScore, previous?.quizScore);
+  const attendanceDelta = metricDelta(latest?.attendancePercentage, previous?.attendancePercentage);
+  const assignmentDelta = metricDelta(latest?.assignmentCompletion, previous?.assignmentCompletion);
+  const formatHours = (value) => {
+    const num = Number(value);
+    if (Number.isNaN(num)) return "0";
+    return Number.isInteger(num) ? String(num) : num.toFixed(1);
+  };
+
+  const statCards = [
+    {
+      icon: "📚",
+      label: "Study Hours",
+      val: latest?.studyTime !== undefined ? formatHours(latest.studyTime) : formatHours(form.studyTime),
+      trend: studyDelta.text,
+      up: studyDelta.up,
+    },
+    {
+      icon: "📝",
+      label: "Quiz Score",
+      val: latest?.quizScore !== undefined ? `${latest.quizScore}%` : form.quizScore ? `${form.quizScore}%` : "0%",
+      trend: quizDelta.text,
+      up: quizDelta.up,
+    },
+    {
+      icon: "✅",
+      label: "Attendance",
+      val:
+        latest?.attendancePercentage !== undefined
+          ? `${latest.attendancePercentage}%`
+          : form.attendance
+          ? `${form.attendance}%`
+          : "0%",
+      trend: attendanceDelta.text,
+      up: attendanceDelta.up,
+    },
+    {
+      icon: "📋",
+      label: "Assignments",
+      val:
+        latest?.assignmentCompletion !== undefined
+          ? `${latest.assignmentCompletion}/10`
+          : form.assignments
+          ? `${form.assignments}%`
+          : "0%",
+      trend: assignmentDelta.text,
+      up: assignmentDelta.up,
+    },
+  ];
 
   const handlePredict = async () => {
     if (!onPredict) return;
@@ -86,6 +149,18 @@ export default function StudentDashboard({ onPredict, onQuizSubmit, loading, cur
     const score = Math.round((correct / quizQuestions.length) * 100);
     await onQuizSubmit({ studentId, quizScore: score });
     setQuizMessage(`Quiz submitted. Score: ${score}%`);
+    setQuizActivities((prev) => [
+      {
+        icon: "📝",
+        name: "Quiz Submission",
+        date: new Date().toLocaleString(),
+        tag: score >= 75 ? "Strong" : score >= 50 ? "Average" : "Weak",
+        cls: score >= 75 ? "tag-strong" : score >= 50 ? "tag-average" : "tag-weak",
+        timestamp: Date.now(),
+      },
+      ...prev,
+    ]);
+    setAnswers({});
   };
 
   return (
@@ -99,9 +174,12 @@ export default function StudentDashboard({ onPredict, onQuizSubmit, loading, cur
           </div>
           <div className="sidebar-nav">
             <div className="sidebar-section">Main Menu</div>
-            {navItems.map((n, i) => (
-              <button key={n.label} className={`nav-item ${activeNav === i ? "active" : ""}`}
-                onClick={() => setActiveNav(i)}>
+            {navItems.map((n) => (
+              <button
+                key={n.label}
+                className={`nav-item ${currentSection === n.section ? "active" : ""}`}
+                onClick={() => onNavigate?.(n.page)}
+              >
                 <span className="nav-icon">{n.icon}</span>
                 {n.label}
               </button>
@@ -111,8 +189,14 @@ export default function StudentDashboard({ onPredict, onQuizSubmit, loading, cur
             <div className="user-avatar">👦</div>
             <div>
               <div className="user-name">{currentUser?.name || "Alex Johnson"}</div>
-              <div className="user-role">Student · {studentId}</div>
+                <div className="user-role">{(currentUser?.role || "student").toUpperCase()} · {studentId}</div>
             </div>
+          </div>
+          <div style={{ padding: "0 8px 12px" }}>
+            <button className="nav-item" onClick={onLogout}>
+              <span className="nav-icon">🚪</span>
+              Logout
+            </button>
           </div>
         </aside>
 
@@ -122,7 +206,7 @@ export default function StudentDashboard({ onPredict, onQuizSubmit, loading, cur
           <div className="topbar">
             <div className="topbar-title">
               <h2>Student Dashboard</h2>
-              <p>Tuesday, March 31, 2025</p>
+              <p>{new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
             </div>
             <div className="topbar-actions">
               <div className="badge-notif">🔔</div>
@@ -134,6 +218,7 @@ export default function StudentDashboard({ onPredict, onQuizSubmit, loading, cur
 
           <div className="sd-body">
             {/* STAT CARDS */}
+            {(currentSection === "dashboard" || currentSection === "analytics") && (
             <div className="stat-cards">
               {statCards.map(s => (
                 <div className="stat-card" key={s.label}>
@@ -148,10 +233,12 @@ export default function StudentDashboard({ onPredict, onQuizSubmit, loading, cur
                 </div>
               ))}
             </div>
+            )}
 
             {/* CONTENT GRID */}
             <div className="content-grid">
               {/* PREDICT FORM */}
+              {currentSection === "predict" && (
               <div className="panel">
                 <div className="panel-header">
                   <h3>⚡ Predict Performance</h3>
@@ -211,8 +298,10 @@ export default function StudentDashboard({ onPredict, onQuizSubmit, loading, cur
                   </button>
                 </div>
               </div>
+              )}
 
               {/* QUIZ FORM */}
+              {currentSection === "quizzes" && (
               <div className="panel">
                 <div className="panel-header">
                   <h3>📝 Today's Quiz</h3>
@@ -259,8 +348,38 @@ export default function StudentDashboard({ onPredict, onQuizSubmit, loading, cur
                   )}
                 </div>
               </div>
+              )}
+
+              {currentSection === "suggestions" && (
+                <div className="panel" style={{ gridColumn: "1 / -1" }}>
+                  <div className="panel-header">
+                    <h3>💡 Personalized Suggestions</h3>
+                    <span>Based on your recent activity</span>
+                  </div>
+                  <div className="panel-body">
+                    <ul className="suggestions-list">
+                      <li>Increase daily study time by at least 30 minutes on weak subjects.</li>
+                      <li>Attempt at least one practice quiz every day this week.</li>
+                      <li>Keep attendance above 85% for stronger predictions.</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {currentSection === "settings" && (
+                <div className="panel" style={{ gridColumn: "1 / -1" }}>
+                  <div className="panel-header">
+                    <h3>⚙️ Dashboard Settings</h3>
+                    <span>Profile preferences</span>
+                  </div>
+                  <div className="panel-body">
+                    <p style={{ color: "#94a3b8" }}>Notification preferences and profile settings can be configured here.</p>
+                  </div>
+                </div>
+              )}
 
               {/* HISTORY */}
+              {currentSection === "progress" && (
               <div className="panel" style={{ gridColumn: "1 / -1" }}>
                 <div className="panel-header">
                   <h3>📜 Recent Activity</h3>
@@ -268,7 +387,7 @@ export default function StudentDashboard({ onPredict, onQuizSubmit, loading, cur
                 </div>
                 <div className="panel-body">
                   <div className="history-list">
-                    {liveHistory.map((h, i) => (
+                    {(liveHistory.length ? liveHistory : fallbackHistory).map((h, i) => (
                       <div className="history-item" key={i}>
                         <div className="history-left">
                           <span className="history-icon">{h.icon}</span>
@@ -280,9 +399,13 @@ export default function StudentDashboard({ onPredict, onQuizSubmit, loading, cur
                         <span className={`tag ${h.cls}`}>{h.tag}</span>
                       </div>
                     ))}
+                    {!liveHistory.length && (
+                      <p style={{ color: "#64748b", margin: 0 }}>No activity yet. Submit a prediction or quiz to see recent activity.</p>
+                    )}
                   </div>
                 </div>
               </div>
+              )}
             </div>
           </div>
         </div>
