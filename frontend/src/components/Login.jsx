@@ -1,20 +1,48 @@
 import { useState } from 'react';
 
-const Login = () => {
+const Login = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('student');
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert(`Login demo: ${email}`);
+    setError('');
+    const ok = await onLogin?.({ email, password, role });
+    if (!ok) {
+      setError('Invalid credentials for selected role.');
+    }
   };
 
   return (
-    <form className="card form-grid" onSubmit={handleSubmit}>
-      <h3>Login</h3>
-      <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required />
-      <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" required />
-      <button className="btn-primary" type="submit">Login</button>
+    <form className="au-form" onSubmit={handleSubmit}>
+      <div>
+        <p className="au-label">Email Address</p>
+        <div className="au-input-wrap">
+          <span>✉️</span>
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@school.edu" required />
+        </div>
+      </div>
+
+      <div>
+        <p className="au-label">Password</p>
+        <div className="au-input-wrap">
+          <span>🔒</span>
+          <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" type="password" required />
+        </div>
+      </div>
+
+      <div>
+        <p className="au-label">Select Role</p>
+        <div className="au-role-grid">
+          <button type="button" className={role === 'student' ? 'au-role-btn active' : 'au-role-btn'} onClick={() => setRole('student')}>🎓 Student</button>
+          <button type="button" className={role === 'teacher' ? 'au-role-btn active' : 'au-role-btn'} onClick={() => setRole('teacher')}>👩‍🏫 Teacher</button>
+        </div>
+      </div>
+
+      {error && <p className="au-msg-error">{error}</p>}
+      <button className="au-submit" type="submit">Sign In →</button>
     </form>
   );
 };
