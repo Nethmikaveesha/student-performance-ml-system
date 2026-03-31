@@ -50,10 +50,17 @@ const App = () => {
   };
 
   return (
-    <main className="container">
-      <Navbar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-      {renderPage()}
-    </main>
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="container">
+          <Navbar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+        </div>
+      </header>
+
+      <main className="app-body">
+        <div className="container page-content">{renderPage()}</div>
+      </main>
+    </div>
   );
 };
 
