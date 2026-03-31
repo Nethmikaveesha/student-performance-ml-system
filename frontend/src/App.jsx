@@ -8,7 +8,7 @@ import SignupPage from './pages/SignupPage';
 import StudentDashboard from './pages/StudentDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import ResultPage from './pages/ResultPage';
-import { createQuiz, getPredictionHistory, predictPerformance } from './services/api';
+import { createQuiz, getPredictionHistory, loginUser, predictPerformance, registerUser } from './services/api';
 import './App.css';
 
 const App = () => {
@@ -17,10 +17,6 @@ const App = () => {
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [users, setUsers] = useState([
-    { name: 'Student User', email: 'student@edupredict.com', password: 'student123', role: 'student' },
-    { name: 'Teacher User', email: 'teacher@edupredict.com', password: 'teacher123', role: 'teacher' },
-  ]);
 
   const loadHistory = async () => {
     try {
@@ -52,23 +48,30 @@ const App = () => {
   };
 
   const onRegister = async (payload) => {
-    setUsers((prev) => [...prev, payload]);
-    setCurrentPage('login');
+    try {
+      await registerUser(payload);
+      setCurrentPage('login');
+      return { ok: true, message: '' };
+    } catch (error) {
+      return {
+        ok: false,
+        message: error?.response?.data?.message || 'Registration failed. Please try again.',
+      };
+    }
   };
 
   const onLogin = async ({ email, password, role }) => {
-    const found = users.find(
-      (u) =>
-        u.email.toLowerCase() === String(email).toLowerCase() &&
-        u.password === password &&
-        u.role === role
-    );
+    try {
+      const response = await loginUser({ email, password, role });
+      const found = response.data;
+      if (!found) return false;
 
-    if (!found) return false;
-
-    setCurrentUser(found);
-    setCurrentPage(role === 'teacher' ? 'teacher-dashboard' : 'student-dashboard');
-    return true;
+      setCurrentUser(found);
+      setCurrentPage(role === 'teacher' ? 'teacher-dashboard' : 'student-dashboard');
+      return true;
+    } catch (_error) {
+      return false;
+    }
   };
 
   const renderPage = () => {

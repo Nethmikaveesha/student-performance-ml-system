@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import '../styles/TeacherDashboard.css';
 
 const navItems = [
@@ -34,15 +34,59 @@ const alerts = [
 
 const scoreColor = (s) => s >= 75 ? "#00d4aa" : s >= 50 ? "#f59e0b" : "#ef4444";
 
-export default function TeacherDashboard() {
+export default function TeacherDashboard({ history = [], currentUser }) {
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [activeNav, setActiveNav] = useState(0);
 
-  const filtered = students.filter(s =>
+  const dynamicStudents = useMemo(() => {
+    if (!history.length) return students;
+    return history.map((h, idx) => ({
+      name: h.studentId || `Student ${idx + 1}`,
+      id: h.studentId || `STU-${String(idx + 1).padStart(3, "0")}`,
+      emoji: "🧑",
+      tag: h.prediction || "Average",
+      cls:
+        h.prediction === "Strong"
+          ? "tag-strong"
+          : h.prediction === "Weak"
+          ? "tag-weak"
+          : "tag-average",
+      quiz: Number(h.quizScore || 0),
+      attendance: Number(h.attendancePercentage || 0),
+      study: Number(h.studyTime || 0),
+    }));
+  }, [history]);
+
+  const filtered = dynamicStudents.filter(s =>
     (filter === "All" || s.tag === filter) &&
     (s.name.toLowerCase().includes(search.toLowerCase()) || s.id.includes(search))
   );
+
+  const distribution = useMemo(() => {
+    const total = dynamicStudents.length || 1;
+    const strong = dynamicStudents.filter((s) => s.tag === "Strong").length;
+    const average = dynamicStudents.filter((s) => s.tag === "Average").length;
+    const weak = dynamicStudents.filter((s) => s.tag === "Weak").length;
+    return [
+      { label: "Strong Students", count: strong, pct: Math.round((strong / total) * 100), color: "#00d4aa" },
+      { label: "Average Students", count: average, pct: Math.round((average / total) * 100), color: "#f59e0b" },
+      { label: "Weak Students", count: weak, pct: Math.round((weak / total) * 100), color: "#ef4444" },
+    ];
+  }, [dynamicStudents]);
+
+  const exportCsv = () => {
+    const headers = ["student_id", "prediction", "quiz_score", "attendance", "study_time"];
+    const rows = filtered.map((s) => [s.id, s.tag, s.quiz, s.attendance, s.study]);
+    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "teacher-report.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <>
@@ -68,8 +112,8 @@ export default function TeacherDashboard() {
           <div className="sidebar-user">
             <div className="user-avatar">👩</div>
             <div>
-              <div className="user-name">Dr. Sarah Chen</div>
-              <div className="user-role">Teacher · CS Dept.</div>
+              <div className="user-name">{currentUser?.name || "Dr. Sarah Chen"}</div>
+              <div className="user-role">Teacher · {currentUser?.email || "CS Dept."}</div>
             </div>
           </div>
         </aside>
@@ -88,7 +132,7 @@ export default function TeacherDashboard() {
                 <input placeholder="Search students…" value={search}
                   onChange={e => setSearch(e.target.value)} />
               </div>
-              <button className="btn-export">⬇ Export Report</button>
+              <button className="btn-export" onClick={exportCsv}>⬇ Export Report</button>
             </div>
           </div>
 
@@ -172,7 +216,14 @@ export default function TeacherDashboard() {
                         </td>
                         <td style={{ color: "#94a3b8" }}>{s.study}h / day</td>
                         <td>
-                          <button className="action-btn">View →</button>
+                          <button
+                            className="action-btn"
+                            onClick={() =>
+                              alert(`${s.name}\nPrediction: ${s.tag}\nQuiz: ${s.quiz}%\nAttendance: ${s.attendance}%\nStudy: ${s.study}h/day`)
+                            }
+                          >
+                            View →
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -187,14 +238,10 @@ export default function TeacherDashboard() {
               <div className="panel">
                 <div className="panel-header">
                   <h3>📊 Class Distribution</h3>
-                  <span>42 students</span>
+                  <span>{dynamicStudents.length} students</span>
                 </div>
                 <div className="panel-body">
-                  {[
-                    { label: "Strong Students", count: 18, pct: 43, color: "#00d4aa" },
-                    { label: "Average Students", count: 16, pct: 38, color: "#f59e0b" },
-                    { label: "Weak Students", count: 8, pct: 19, color: "#ef4444" },
-                  ].map(d => (
+                  {distribution.map(d => (
                     <div className="dist-item" key={d.label}>
                       <div className="dist-label-row">
                         <span className="dist-label">{d.label}</span>
@@ -240,7 +287,12 @@ export default function TeacherDashboard() {
                           <div className="alert-name">{a.name}</div>
                           <div className="alert-detail">{a.detail}</div>
                         </div>
-                        <button className="alert-action">Contact</button>
+                        <button
+                          className="alert-action"
+                          onClick={() => (window.location.href = "mailto:support@edupredict.com")}
+                        >
+                          Contact
+                        </button>
                       </div>
                     ))}
                   </div>

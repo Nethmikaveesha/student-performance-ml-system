@@ -6,10 +6,17 @@ const Register = ({ onRegister }) => {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('student');
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await onRegister?.({ name, email, password, role });
+    setError('');
+    setMessage('');
+    const result = await onRegister?.({ name, email, password, role });
+    if (!result?.ok) {
+      setError(result?.message || 'Registration failed.');
+      return;
+    }
     setMessage('Account created. You can now login.');
   };
 
@@ -47,6 +54,7 @@ const Register = ({ onRegister }) => {
         </div>
       </div>
 
+      {error && <p className="au-msg-error">{error}</p>}
       {message && <p className="au-msg-success">{message}</p>}
       <button className="au-submit" type="submit">Create Account →</button>
     </form>

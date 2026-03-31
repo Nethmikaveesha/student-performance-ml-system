@@ -3,8 +3,11 @@ const mongoose = require('mongoose');
 const studentSchema = new mongoose.Schema(
   {
     studentId: { type: String, required: true, unique: true, trim: true },
-    name: { type: String, default: '' },
-    email: { type: String, default: '' },
+    name: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, trim: true, lowercase: true },
+    password: { type: String, required: true },
+    grade: { type: String, default: 'Grade 11' },
+    role: { type: String, default: 'student' },
   },
   { timestamps: true }
 );
