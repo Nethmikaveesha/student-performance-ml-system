@@ -1,102 +1,158 @@
 # Smart Student Performance Prediction System
 
-Full-stack MERN app plus a Python (Scikit-learn) model that predicts student performance as **Weak**, **Average**, or **Strong** from study habits and scores.
+A full-stack MERN + Python (Scikit-learn) project that predicts student performance (`Weak`, `Average`, `Strong`) using learning behavior data.
 
-## Repository layout
+---
 
-| Path | Role |
-|------|------|
-| `frontend/` | Vite + React UI |
-| `backend/` | Express + Mongoose API, JWT auth, calls `ml-model/predict.py` |
-| `ml-model/` | **Canonical** training data, `train_model.py`, `predict.py`, and `model/student_model.pkl` |
+## Features
 
-There is no separate `ml/` tree in this repo; use **`ml-model/`** for all ML work.
+- Secure authentication using `bcrypt` password hashing
+- JWT-based login sessions
+- Protected API routes with role-based access (`student` / `teacher`)
+- Student dashboard (prediction, quizzes, progress tracking)
+- Teacher dashboard (student overview and class insights)
+- Machine Learning integration using Python (`ml-model/predict.py`)
+- Proper error handling (validation, network errors, server errors)
 
-## Prerequisites
+---
 
-- Node.js 18+
-- Python 3 with `pandas`, `scikit-learn`, `joblib`
-- MongoDB (local or [MongoDB Atlas](https://www.mongodb.com/atlas))
+## Functional Requirements
 
-## Environment variables
+### 1. User Registration
+- The system shall allow users to register as either `student` or `teacher`.
+- The system shall require the following details:
+  - `name`
+  - `email`
+  - `password`
+  - `role`
+- The system shall reject duplicate email registrations.
+- The system shall generate and store a unique `studentId` for student accounts.
 
-### Backend (`backend/.env`)
+### 2. User Authentication
+- The system shall hash passwords using `bcrypt` before storing them.
+- The system shall authenticate users using:
+  - `email`
+  - `password`
+  - `role`
+- The system shall issue a JWT token after successful login.
+- The system shall allow users to retrieve their profile using the token (`/api/auth/me`).
 
-Copy from `backend/.env.example`:
+### 3. Authorization & Access Control
+- The system shall require a valid JWT token for protected routes.
+- The system shall restrict access based on user role:
+  - Students -> prediction, quiz submission, own history
+  - Teachers -> student performance and class insights
+- The system shall return proper HTTP responses (`401`, `403`) for unauthorized access.
 
-- `MONGO_URI` — Mongo connection string (required)
-- `PORT` — default `5000`
-- `PYTHON_PATH` — e.g. `python` or `python3`
-- `ML_PREDICT_SCRIPT` — path to `predict.py` (default `../../ml-model/predict.py` relative to `backend/ml-integration`)
-- `JWT_SECRET` — **required in production**; use a long random string
-- `JWT_EXPIRES_IN` — optional, default `7d`
+### 4. Student Identity Consistency
+- The system shall use the logged-in student's `studentId` from the JWT token.
+- The system shall not trust any `studentId` sent from the frontend.
 
-### Frontend (`frontend/.env`)
+### 5. Prediction Input Handling
+The system shall accept the following inputs:
+- Study time
+- Attendance percentage
+- Quiz score
+- Assignment completion percentage
+- Number of attempts
+- Lesson completion percentage
 
-- `VITE_API_BASE_URL` — e.g. `http://localhost:5000/api` (omit to use this default)
+The system shall validate the following ranges:
+- Study time: `0 - 6`
+- Attendance: `40 - 100`
+- Quiz score: `0 - 100`
+- Assignment completion: `0 - 100`
+- Attempts: `1 - 5`
+- Lesson completion: `0 - 100`
 
-## Install and run (local)
+Invalid inputs shall be rejected with clear error messages.
 
-```bash
-# ML model (once)
-cd ml-model
-pip install pandas scikit-learn joblib
-python train_model.py
+### 6. Prediction Generation
+- The system shall call the Python ML model from the backend.
+- The system shall return one of the following results:
+  - `Weak`
+  - `Average`
+  - `Strong`
+- The system shall store prediction inputs and results in the database with a timestamp.
 
-# Backend
-cd ../backend
-cp .env.example .env   # then edit MONGO_URI and JWT_SECRET
-npm install
-npm run dev
+### 7. Quiz Submission
+- The system shall allow students to submit quiz scores.
+- Quiz score must be between `0 - 100`.
+- Quiz results shall be stored using the logged-in student's identity.
+- Teachers and students shall be able to retrieve quiz data based on role permissions.
 
-# Frontend (new terminal)
-cd ../frontend
-npm install
-npm run dev
-```
+### 8. Student Dashboard
+Students shall be able to:
+- Submit prediction data
+- Submit quizzes
+- View personal progress/history
+- View prediction results
 
-Open the Vite URL (usually `http://localhost:5173`). The UI stores a JWT in `localStorage` after login/register and sends `Authorization: Bearer <token>` on API calls.
+The result page shall include:
+- Back to dashboard
+- Predict again
+- Download report
 
-## Auth and roles
+### 9. Teacher Dashboard
+Teachers shall be able to:
+- View student lists
+- View prediction results
+- View student performance trends
+- Access class insights
 
-- Passwords are hashed with **bcrypt**; plaintext passwords are not stored.
-- **Register** and **login** return a **JWT** plus user profile (`studentId` is only on student accounts).
-- **Students**: `POST /api/predictions`, `POST /api/quiz`, `GET /api/predictions/history` (own rows only), `GET /api/quiz` (own quizzes).
-- **Teachers**: `GET /api/students`, `GET /api/teachers`, `GET /api/predictions/history` (all), `GET /api/quiz` (all), `POST /api/students` (manual student creation).
-- **Legacy accounts** created before bcrypt: first successful login with the correct plaintext password re-hashes and saves the password automatically.
+### 10. Data Refresh Behavior
+The system shall refresh data automatically:
+- After prediction submission
+- After quiz submission
+- After login
 
-## Training the model
+The dashboard shall stay updated without refreshing the browser manually.
 
-```bash
-cd ml-model
-python train_model.py
-```
+### 11. Error Handling (Frontend)
+The system shall display:
+- Validation errors
+- Server errors (`500`)
+- Network/offline errors
 
-This reads `dataset/student-data.csv` and writes `model/student_model.pkl`. Prediction features must stay aligned with training (see backend validation): study time 0–6 h, attendance 40–100%, quiz 0–100%, assignments 0–10 (or 0–100% scaled server-side), attempts 1–5, lessons 0–100%.
+Clear API error messages shall be shown to the user.
 
-## API tests (backend)
+### 12. Session Handling (Frontend)
+- The system shall store the JWT token in browser storage.
+- The system shall automatically attach the token to protected API requests.
+- The system shall clear authentication data after logout.
 
-```bash
-cd backend
-npm test
-```
+### 13. Navigation Rules
+- Users shall be redirected to the correct dashboard after login.
+- Users shall **NOT** be redirected automatically after registration.
+- The result page shall be displayed without the main header/footer.
 
-Smoke checks: health route, unauthenticated prediction history, login validation, protected students route.
+---
 
-## Frontend smoke test
+## Tech Stack
 
-```bash
-cd frontend
-npm test
-```
+### Frontend
+- React
+- Vite
+- Axios
 
-## Demo accounts
+### Backend
+- Node.js
+- Express
+- MongoDB
+- Mongoose
 
-There are no built-in seed users. Register a **student** and a **teacher** via the UI (or call `POST /api/auth/register`), then log in with the chosen role.
+### Machine Learning
+- Python
+- pandas
+- scikit-learn
+- joblib
 
-## Deployment (outline)
+### Authentication
+- bcryptjs
+- jsonwebtoken
 
-1. **MongoDB Atlas** — create a cluster, allow your app host IP (or `0.0.0.0/0` for trials), copy URI into `MONGO_URI`.
-2. **Backend** — deploy to Render, Railway, Fly.io, etc.; set env vars; ensure Python and `ML_PREDICT_SCRIPT` path are valid on the host (or containerize with Node + Python).
-3. **Frontend** — deploy to Vercel or Netlify; set `VITE_API_BASE_URL` to your public API URL (e.g. `https://api.example.com/api`).
-4. Use **HTTPS** everywhere; set a strong `JWT_SECRET` in production.
+---
+
+
+
+
