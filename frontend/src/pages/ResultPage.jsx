@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import '../styles/ResultPage.css';
 
 const configs = {
@@ -49,12 +49,17 @@ const sampleData = {
   Weak:    { studyTime: 1, quizScore: 28, attendance: 45, assignments: 40, lessons: 30, attempts: 2 },
 };
 
-export default function ResultPage({ result = "Strong" }) {
+export default function ResultPage({
+  result = "Strong",
+  onBackToDashboard,
+  onPredictAgain,
+}) {
   const [animPct, setAnimPct] = useState(0);
   const [animMetrics, setAnimMetrics] = useState({});
   const r = result && configs[result] ? result : null;
   const cfg = r ? configs[r] : null;
   const data = r ? sampleData[r] : null;
+  const generatedAt = useMemo(() => new Date().toLocaleString(), []);
 
   const R = 52, C = 2 * Math.PI * R;
 
@@ -69,6 +74,34 @@ export default function ResultPage({ result = "Strong" }) {
 
   const offset = C - (animPct / 100) * C;
 
+  const downloadReport = () => {
+    if (!r || !cfg) return;
+    const rows = metrics.map((m) => `${m.label}: ${animMetrics[m.key] ?? 0}${m.unit}`);
+    const content = [
+      'EduPredict - Prediction Report',
+      `Generated: ${generatedAt}`,
+      `Result: ${r}`,
+      `Badge: ${cfg.badge}`,
+      '',
+      'Key Metrics',
+      ...rows,
+      '',
+      'Suggestions',
+      ...cfg.suggestions.map((s, i) => `${i + 1}. ${s.text}`),
+      '',
+    ].join('\n');
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `prediction-report-${r.toLowerCase()}-${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
 <div className="rp-root">
@@ -79,7 +112,7 @@ export default function ResultPage({ result = "Strong" }) {
               <div className="nav-logo-icon">🧠</div>
               EduPredict
             </div>
-            <button className="nav-back">← Back to Dashboard</button>
+            <button className="nav-back" onClick={onBackToDashboard}>← Back to Dashboard</button>
           </nav>
 
           <main className="rp-main">
@@ -147,8 +180,8 @@ export default function ResultPage({ result = "Strong" }) {
                     </ul>
 
                     <div className="actions">
-                      <button className="btn-primary">Predict Again</button>
-                      <button className="btn-ghost">Download Report</button>
+                      <button className="btn-primary" onClick={onPredictAgain}>Predict Again</button>
+                      <button className="btn-ghost" onClick={downloadReport}>Download Report</button>
                     </div>
                   </div>
                 </div>
@@ -176,7 +209,7 @@ export default function ResultPage({ result = "Strong" }) {
                 <h3>No Prediction Yet</h3>
                 <p>Submit your academic data from the dashboard to see your prediction here.</p>
                 <div className="actions" style={{ justifyContent:"center" }}>
-                  <button className="btn-primary">Go to Dashboard</button>
+                  <button className="btn-primary" onClick={onBackToDashboard}>Go to Dashboard</button>
                 </div>
               </div>
             )}

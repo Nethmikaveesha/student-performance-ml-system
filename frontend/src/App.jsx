@@ -8,15 +8,37 @@ import SignupPage from './pages/SignupPage';
 import StudentDashboard from './pages/StudentDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import ResultPage from './pages/ResultPage';
-import { createQuiz, getPredictionHistory, getStudents, loginUser, predictPerformance, registerUser } from './services/api';
+import {
+  apiErrorMessage,
+  clearAuth,
+  createQuiz,
+  extractAuthFromBody,
+  getPredictionHistory,
+  getStoredAuth,
+  getStudents,
+  loginUser,
+  persistAuth,
+  predictPerformance,
+  registerUser,
+  setAuthToken,
+} from './services/api';
 import './App.css';
 
+function initialPage() {
+  const u = getStoredAuth()?.user;
+  if (u?.role === 'teacher') return 'teacher-dashboard';
+  if (u?.role === 'student') return 'student-dashboard';
+  return 'home';
+}
+
 const App = () => {
-  const [currentPage, setCurrentPage] = useState('home');
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [history, setHistory] = useState([]);
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [predictError, setPredictError] = useState('');
+  const [quizApiError, setQuizApiError] = useState('');
+  const [currentUser, setCurrentUser] = useState(() => getStoredAuth()?.user ?? null);
   const [students, setStudents] = useState([]);
 
   const loadHistory = async () => {
@@ -38,24 +60,37 @@ const App = () => {
   };
 
   useEffect(() => {
+    const s = getStoredAuth();
+    if (!s?.token || !s?.user) return;
+    setAuthToken(s.token);
     loadHistory();
-    loadStudents();
+    if (s.user.role === 'teacher') loadStudents();
   }, []);
 
   const onPredict = async (payload) => {
+    setPredictError('');
     setLoading(true);
     try {
       const res = await predictPerformance(payload);
       setResult(res.model.prediction);
       setCurrentPage('result');
       await loadHistory();
+    } catch (error) {
+      setPredictError(apiErrorMessage(error));
     } finally {
       setLoading(false);
     }
   };
 
   const onQuizSubmit = async (quiz) => {
-    await createQuiz(quiz);
+    setQuizApiError('');
+    try {
+      await createQuiz(quiz);
+      if (currentUser?.role === 'teacher') await loadStudents();
+    } catch (error) {
+      setQuizApiError(apiErrorMessage(error));
+      throw error;
+    }
   };
 
   const onRegister = async (payload) => {
@@ -66,27 +101,42 @@ const App = () => {
     } catch (error) {
       return {
         ok: false,
-        message: error?.response?.data?.message || 'Registration failed. Please try again.',
+        message: apiErrorMessage(error),
       };
     }
   };
 
   const onLogin = async ({ email, password, role }) => {
     try {
-      const response = await loginUser({ email, password, role });
-      const found = response.data;
-      if (!found) return false;
-
-      setCurrentUser(found);
+      const body = await loginUser({ email, password, role });
+      const auth = extractAuthFromBody(body);
+      if (!auth?.token) {
+        return {
+          ok: false,
+          message:
+            'No session token from the server. Set VITE_API_BASE_URL to your API root ending in /api (example: http://localhost:5000/api), restart the backend, and try again.',
+        };
+      }
+      const { token, user } = auth;
+      persistAuth(user, token);
+      setCurrentUser(user);
       setCurrentPage(role === 'teacher' ? 'teacher-dashboard' : 'student-dashboard');
-      return true;
-    } catch (_error) {
-      return false;
+      await loadHistory();
+      if (role === 'teacher') await loadStudents();
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        message: apiErrorMessage(error),
+      };
     }
   };
 
   const onLogout = () => {
+    clearAuth();
     setCurrentUser(null);
+    setHistory([]);
+    setStudents([]);
     setCurrentPage('home');
   };
 
@@ -120,6 +170,10 @@ const App = () => {
           currentSection={sectionMap[currentPage]}
           onNavigate={setCurrentPage}
           onLogout={onLogout}
+          predictError={predictError}
+          onClearPredictError={() => setPredictError('')}
+          quizApiError={quizApiError}
+          onClearQuizApiError={() => setQuizApiError('')}
         />
       );
     }
@@ -152,13 +206,23 @@ const App = () => {
         />
       );
     }
-    if (currentPage === 'result') return <ResultPage result={result} />;
+    if (currentPage === 'result') {
+      const studentHomePage = currentUser?.role === 'student' ? 'student-dashboard' : 'home';
+      return (
+        <ResultPage
+          result={result}
+          onBackToDashboard={() => setCurrentPage(studentHomePage)}
+          onPredictAgain={() => setCurrentPage('student-predict')}
+        />
+      );
+    }
     return <Home />;
   };
 
   const hideChrome =
     currentPage === 'login' ||
     currentPage === 'signup' ||
+    currentPage === 'result' ||
     currentPage.startsWith('student-') ||
     currentPage.startsWith('teacher-');
 

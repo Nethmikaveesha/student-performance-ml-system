@@ -1,12 +1,49 @@
+const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
+/** ml-model/ lives at repo root; __dirname is backend/ml-integration */
+function resolvePredictScript() {
+  const fromEnv = process.env.ML_PREDICT_SCRIPT;
+  const candidates = [];
+
+  if (fromEnv) {
+    if (path.isAbsolute(fromEnv)) {
+      candidates.push(fromEnv);
+    } else {
+      candidates.push(path.resolve(__dirname, fromEnv));
+      candidates.push(path.resolve(process.cwd(), fromEnv));
+    }
+  }
+
+  candidates.push(path.resolve(__dirname, '../../ml-model/predict.py'));
+  candidates.push(path.join(process.cwd(), 'ml-model', 'predict.py'));
+
+  const seen = new Set();
+  for (const p of candidates) {
+    const n = path.normalize(p);
+    if (seen.has(n)) continue;
+    seen.add(n);
+    if (fs.existsSync(n)) return n;
+  }
+
+  const tried = [...seen].join('\n  ');
+  throw new Error(
+    `predict.py not found. Set ML_PREDICT_SCRIPT to an existing file (repo layout: ml-model/predict.py at project root, not inside backend/). Tried:\n  ${tried}`
+  );
+}
+
 const runModel = (payload) =>
   new Promise((resolve, reject) => {
-    const pythonPath = process.env.PYTHON_PATH || 'python';
-    const scriptPath = process.env.ML_PREDICT_SCRIPT || '../../ml-model/predict.py';
-    const resolvedScriptPath = path.resolve(__dirname, scriptPath);
+    let resolvedScriptPath;
+    try {
+      resolvedScriptPath = resolvePredictScript();
+    } catch (err) {
+      reject(err);
+      return;
+    }
 
+    const pythonPath = process.env.PYTHON_PATH || 'python';
     const pyProcess = spawn(pythonPath, [resolvedScriptPath, JSON.stringify(payload)]);
 
     let stdout = '';

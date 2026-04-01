@@ -1,9 +1,16 @@
+const bcrypt = require('bcryptjs');
 const Student = require('../models/Student');
 
 const createStudent = async (req, res) => {
   try {
-    const student = await Student.create(req.body);
-    return res.status(201).json({ data: student });
+    const body = { ...req.body };
+    if (body.password) {
+      body.password = await bcrypt.hash(String(body.password), 10);
+    }
+    const student = await Student.create(body);
+    const out = student.toObject();
+    delete out.password;
+    return res.status(201).json({ data: out });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }

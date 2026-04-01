@@ -34,9 +34,13 @@ export default function StudentDashboard({
   currentSection = "dashboard",
   onNavigate,
   onLogout,
+  predictError = "",
+  onClearPredictError,
+  quizApiError = "",
+  onClearQuizApiError,
 }) {
   const [form, setForm] = useState({
-    studyTime: 0, quizScore: "", attendance: "", assignments: "", lessons: "", attempts: 0
+    studyTime: 0, quizScore: "", attendance: "", assignments: "", lessons: "", attempts: 1
   });
   const [answers, setAnswers] = useState({});
   const [quizMessage, setQuizMessage] = useState("");
@@ -131,8 +135,8 @@ export default function StudentDashboard({
 
   const handlePredict = async () => {
     if (!onPredict) return;
+    onClearPredictError?.();
     const payload = {
-      studentId,
       studyTime: Number(form.studyTime),
       attendancePercentage: Number(form.attendance),
       quizScore: Number(form.quizScore),
@@ -145,9 +149,14 @@ export default function StudentDashboard({
 
   const handleQuiz = async () => {
     if (!onQuizSubmit) return;
+    onClearQuizApiError?.();
     const correct = quizAnswers.reduce((acc, correctIndex, idx) => (answers[idx] === correctIndex ? acc + 1 : acc), 0);
     const score = Math.round((correct / quizQuestions.length) * 100);
-    await onQuizSubmit({ studentId, quizScore: score });
+    try {
+      await onQuizSubmit({ quizScore: score });
+    } catch {
+      return;
+    }
     setQuizMessage(`Quiz submitted. Score: ${score}%`);
     setQuizActivities((prev) => [
       {
@@ -254,7 +263,7 @@ export default function StudentDashboard({
                     </div>
                     <div className="field">
                       <label>Attendance (%)</label>
-                      <input type="number" min="0" max="100" placeholder="0–100"
+                      <input type="number" min="40" max="100" placeholder="40–100"
                         value={form.attendance}
                         onChange={e => setForm({...form, attendance: e.target.value})} />
                     </div>
@@ -276,7 +285,7 @@ export default function StudentDashboard({
                     <div className="field">
                       <label>Daily Study Time — <span style={{color:"#00d4aa"}}>{form.studyTime} hrs</span></label>
                       <div className="slider-row">
-                        <input type="range" min="0" max="12" step="0.5"
+                        <input type="range" min="0" max="6" step="0.5"
                           value={form.studyTime}
                           onChange={e => setForm({...form, studyTime: parseFloat(e.target.value)})} />
                         <span className="slider-val">{form.studyTime}h</span>
@@ -285,7 +294,7 @@ export default function StudentDashboard({
                     <div className="field" style={{marginTop:12}}>
                       <label>Quiz Attempts — <span style={{color:"#00d4aa"}}>{form.attempts}×</span></label>
                       <div className="slider-row">
-                        <input type="range" min="0" max="10" step="1"
+                        <input type="range" min="1" max="5" step="1"
                           value={form.attempts}
                           onChange={e => setForm({...form, attempts: parseInt(e.target.value)})} />
                         <span className="slider-val">{form.attempts}×</span>
@@ -293,6 +302,11 @@ export default function StudentDashboard({
                     </div>
                   </div>
 
+                  {predictError && (
+                    <p className="sd-api-error" style={{ color: "#f87171", fontSize: "0.85rem", marginTop: 10 }}>
+                      {predictError}
+                    </p>
+                  )}
                   <button className="btn-full" onClick={handlePredict} disabled={loading}>
                     {loading ? "Predicting…" : "🔮 Predict My Performance"}
                   </button>
@@ -343,6 +357,9 @@ export default function StudentDashboard({
                     disabled={Object.keys(answers).length < quizQuestions.length}>
                     Submit Quiz →
                   </button>
+                  {quizApiError && (
+                    <p style={{ marginTop: 10, color: "#f87171", fontSize: "0.85rem" }}>{quizApiError}</p>
+                  )}
                   {quizMessage && (
                     <p style={{ marginTop: 10, color: "#00d4aa", fontSize: "0.85rem" }}>{quizMessage}</p>
                   )}

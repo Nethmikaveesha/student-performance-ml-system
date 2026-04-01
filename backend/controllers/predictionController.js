@@ -1,27 +1,24 @@
 const Prediction = require('../models/Prediction');
 const { runModel } = require('../ml-integration/runModel');
+const { buildPredictionPayload } = require('../utils/predictionPayload');
 
 const createPrediction = async (req, res) => {
   try {
-    const payload = {
-      study_time: Number(req.body.studyTime),
-      attendance_percentage: Number(req.body.attendancePercentage),
-      quiz_score: Number(req.body.quizScore),
-      assignment_completion: Number(req.body.assignmentCompletion),
-      number_of_attempts: Number(req.body.numberOfAttempts),
-      lesson_completion_percentage: Number(req.body.lessonCompletionPercentage),
-    };
+    const parsed = buildPredictionPayload(req.body);
+    if (!parsed.ok) {
+      return res.status(400).json({ message: parsed.errors.join('; ') });
+    }
 
-    const model = await runModel(payload);
+    const studentId = req.user.studentId;
+    if (!studentId) {
+      return res.status(403).json({ message: 'Student account required for predictions' });
+    }
+
+    const model = await runModel(parsed.forModel);
 
     const record = await Prediction.create({
-      studentId: req.body.studentId,
-      studyTime: payload.study_time,
-      attendancePercentage: payload.attendance_percentage,
-      quizScore: payload.quiz_score,
-      assignmentCompletion: payload.assignment_completion,
-      numberOfAttempts: payload.number_of_attempts,
-      lessonCompletionPercentage: payload.lesson_completion_percentage,
+      studentId,
+      ...parsed.forDb,
       prediction: model.prediction,
     });
 
@@ -31,9 +28,21 @@ const createPrediction = async (req, res) => {
   }
 };
 
-const getPredictionHistory = async (_req, res) => {
-  const rows = await Prediction.find().sort({ createdAt: -1 }).limit(50);
-  return res.status(200).json({ data: rows });
+const getPredictionHistory = async (req, res) => {
+  try {
+    if (req.user.role === 'teacher') {
+      const rows = await Prediction.find().sort({ createdAt: -1 }).limit(100);
+      return res.status(200).json({ data: rows });
+    }
+    const sid = req.user.studentId;
+    if (!sid) {
+      return res.status(403).json({ message: 'Student ID missing from session' });
+    }
+    const rows = await Prediction.find({ studentId: sid }).sort({ createdAt: -1 }).limit(50);
+    return res.status(200).json({ data: rows });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 };
 
 module.exports = { createPrediction, getPredictionHistory };

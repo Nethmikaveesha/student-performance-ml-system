@@ -9,9 +9,9 @@ const Login = ({ onLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const ok = await onLogin?.({ email, password, role });
-    if (!ok) {
-      setError('Invalid credentials for selected role.');
+    const result = await onLogin?.({ email, password, role });
+    if (!result?.ok) {
+      setError(result?.message || 'Sign in failed. Check your email, password, and role.');
     }
   };
 
